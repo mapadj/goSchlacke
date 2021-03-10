@@ -1,7 +1,6 @@
 package db
 
 import (
-	"bufio"
 	"context"
 	"database/sql"
 	"fmt"
@@ -65,56 +64,113 @@ type ImportTxResult struct {
 
 // ImportChoserParams params
 type ImportChoserParams struct {
-	Ctx     context.Context
-	Arg     ImportTxParams
-	Result  *ImportTxResult
-	Scanner *bufio.Scanner
+	Ctx            context.Context
+	ImportTxParams ImportTxParams
+	ImportTxResult *ImportTxResult
+	File           *os.File
+	Functions      Functions
 }
 
 // ImportTx import transaction
-func (store *Store) ImportTx(ctx context.Context, arg ImportTxParams) (result ImportTxResult, err error) {
+func (store *Store) ImportTx(ctx context.Context, importTxParams ImportTxParams) (importTxResult ImportTxResult, err error) {
 
 	// Init result
-	result.NumberOfLines = 0
-	result.NumberOfFailes = 0
-	result.Success = false
-	result.Inserts = 0
-	result.Updates = 0
+	importTxResult.NumberOfLines = 0
+	importTxResult.NumberOfFailes = 0
+	importTxResult.Success = false
+	importTxResult.Inserts = 0
+	importTxResult.Updates = 0
 
 	// Open File
-	file, err := os.Open(arg.FilePath)
+	file, err := os.Open(importTxParams.FilePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
 
 	// Count Lines
-	result.NumberOfLines, err = util.LineCounter(file)
+	importTxResult.NumberOfLines, err = util.LineCounter(file)
 	if err != nil {
-		return result, err
+		return importTxResult, err
 	}
-	println("LineCount: ", result.NumberOfLines)
-	// Calculate Max Error Count
-	arg.MaxErrorCount = result.NumberOfLines * arg.MaxFailRateInPerCent / 100
-
+	// Reset File Pointer
 	file.Seek(0, io.SeekStart)
 
-	scanner := bufio.NewScanner(file)
+	// Log LineCount
+	println("LineCount: ", importTxResult.NumberOfLines)
 
-	importArgs := &ImportChoserParams{
-		Ctx:     ctx,
-		Arg:     arg,
-		Result:  &result,
-		Scanner: scanner,
+	// Calculate Max Error Count
+	importTxParams.MaxErrorCount = importTxResult.NumberOfLines * importTxParams.MaxFailRateInPerCent / 100
+
+	importChoserParams := &ImportChoserParams{
+		Ctx:            ctx,
+		ImportTxParams: importTxParams,
+		ImportTxResult: &importTxResult,
+		File:           file,
 	}
 
-	fn := map[string]func(args *ImportChoserParams) (err error){
+	fn := map[string]func(importChoserParams *ImportChoserParams) (err error){
 		"rimsV1":      store.ConvertRimsV1,
 		"timespansV1": store.ConvertTimespansV1,
 	}
 
 	// Chose Importfunction and Import
-	err = fn[arg.Table+arg.DatVersion](importArgs)
+	err = fn[importTxParams.Table+importTxParams.DatVersion](importChoserParams)
 
-	return result, err
+	return importTxResult, err
+}
+
+// ConvertRimsV1 choses Import
+func (store *Store) ConvertRimsV1(importChoserParams *ImportChoserParams) (err error) {
+	return store.execTx(importChoserParams.Ctx, func(q *Queries) error {
+
+		// Count Table Size
+		numberOfEntries, err := DBRowCounter[importChoserParams.ImportTxParams.Table+importChoserParams.ImportTxParams.DatVersion](importChoserParams.Ctx)
+		if err != nil {
+			return err
+		}
+
+		errorChannel := make(chan error)
+
+		newLines := FileReader(importChoserParams.File)
+		primitveStructs := StructPress(newLines)
+		convertedStructs := StartConvertAndValidateThread(primitveStructs, *importChoserParams, errorChannel)
+
+	enough:
+		// This is the Query Loop. It waits for receives Data from channel X until it closes.
+		for {
+			select {
+			case err := <-errorChannel:
+				return err
+			// Wait for data
+			case val, ok := <-convertedStructs:
+				// check data health
+				if !ok {
+					log.Println(val, ok, "loop broke")
+					break enough
+				}
+
+				// Add query to transaction
+				_, err = q.UpsertRimsV1(importChoserParams.Ctx, val)
+				if err != nil {
+					log.Println("Upsert failed: ", err)
+					return err
+				}
+			}
+		}
+
+		// Count Table Size
+		numberOfEntriesAfter, err := q.CountRimsV1(importChoserParams.Ctx)
+		if err != nil {
+			return err
+		}
+
+		// Statistics
+		r := importChoserParams.ImportTxResult
+		r.Inserts = int(numberOfEntriesAfter - numberOfEntries)
+		r.Updates = int(r.NumberOfLines - r.NumberOfFailes - r.Inserts)
+		r.Success = true
+		return nil
+	})
+
 }

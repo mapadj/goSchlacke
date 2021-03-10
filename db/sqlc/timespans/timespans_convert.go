@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bufio"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -84,12 +85,13 @@ func (store *Store) ConvertTimespansV1(args *ImportChoserParams) (err error) {
 			return err
 		}
 
+		scanner := bufio.NewScanner(args.File)
 		// Scan Lines
-		for args.Scanner.Scan() {
+		for scanner.Scan() {
 
 			// Prepare
 			lineIndex++
-			line := args.Scanner.Text()
+			line := scanner.Text()
 
 			qarg, err := ConvertLineTimespansV1(line)
 			if err != nil {
@@ -103,12 +105,12 @@ func (store *Store) ConvertTimespansV1(args *ImportChoserParams) (err error) {
 				return err
 			}
 
-			if errorCount > args.Arg.MaxErrorCount {
+			if errorCount > args.ImportTxParams.MaxErrorCount {
 				return errors.New("MaxErrorCount is reached")
 			}
 
 		}
-		if err := args.Scanner.Err(); err != nil {
+		if err := scanner.Err(); err != nil {
 			log.Fatal(err)
 		}
 
@@ -118,12 +120,13 @@ func (store *Store) ConvertTimespansV1(args *ImportChoserParams) (err error) {
 			return err
 		}
 
+		r := args.ImportTxResult
 		// Statistics
-		args.Result.NumberOfFailes = errorCount
-		args.Result.Inserts = int(numberOfEntriesAfter - numberOfEntries)
-		args.Result.Updates = int(args.Result.NumberOfLines - args.Result.NumberOfFailes - args.Result.Inserts)
-		println("ErrorCount:", args.Result.NumberOfFailes, "of", args.Result.NumberOfLines)
-		args.Result.Success = true
+		r.NumberOfFailes = errorCount
+		r.Inserts = int(numberOfEntriesAfter - numberOfEntries)
+		r.Updates = int(r.NumberOfLines - r.NumberOfFailes - r.Inserts)
+		println("ErrorCount:", r.NumberOfFailes, "of", r.NumberOfLines)
+		r.Success = true
 
 		return nil
 	})

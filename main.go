@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/lib/pq"
 	db "github.com/mapadj/goSchlacke/db/sqlc"
+	"github.com/mapadj/goSchlacke/db/sqlc/rims"
 	"github.com/mapadj/goSchlacke/util"
 )
 
@@ -20,7 +21,27 @@ const (
 var queries *db.Queries
 var arg *db.ImportTxParams
 
+type Functions struct {
+	ImportTableFactory   func() interface{}
+	CountDatabaseEntries func(ctx context.Context) (count int64, err error)
+	ConvertAndValidate   func(importTable interface{}) (result interface{}, err error)
+	Upsert               func(ctx context.Context, params interface{}) (result interface{}, err error)
+}
+
+var FunctionsRimsV1 = Functions{
+	ImportTableFactory:   rims.NewImportTable(),
+	CountDatabaseEntries: queries.CountRimsV1,
+	ConvertAndValidate:   rims.ConvertAndValidate,
+	Upsert:               db.UpsertRimsV1Params,
+}
+
+var DBRowCounter = &map[string]func(ctx context.Context) (count int64, err error){
+	"RimsV1":     queries.CountRimsV1,
+	"TimespanV1": queries.CountTimespansV1,
+}
+
 func init() {
+
 	// Prepare Data
 	arg = &db.ImportTxParams{}
 	flag.IntVar(&arg.MaxFailRateInPerCent, "max-fail-rate", 5, "Maximal Allowed Failrate in %. Default: 5")
@@ -38,6 +59,7 @@ func init() {
 	if arg.Table == "" {
 		log.Fatalln("table flag missing")
 	}
+
 }
 
 func main() {
@@ -61,9 +83,9 @@ func main() {
 	// Import Data
 	result, err := store.ImportTx(context.Background(), *arg)
 	if err != nil {
-		println(err.Error())
+		println("Importing Data Failed: ", err.Error())
 	} else {
-		println("Inserts: ", result.Inserts, " | Updates: ", result.Updates)
+		println("Inserts: ", result.Inserts, " | Updates: ", result.Updates, " | Errors: ", result.NumberOfFailes, " | %: ", result.NumberOfFailes/result.NumberOfLines)
 	}
 
 	// Track Finish Time

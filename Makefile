@@ -25,8 +25,8 @@ sqlc:
 test:
 	go test -v -cover ./...
 
-server:
-	go run main.go
+happy:
+	go run main.go -table rims -file data/rims_good.dat
 
 mock:
 	mockgen -package mockdb -destination db/mock/store.go db/sqlc Querier
