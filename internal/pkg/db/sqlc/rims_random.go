@@ -56,7 +56,7 @@ func RandomRimMaterial() sql.NullString {
 }
 
 // RandomRimV1 generate Random Schlacke RimV1 Data
-func RandomRimV1() UpsertRimsV1Params {
+func RandomUpsertRimsV1Params() UpsertRimsV1Params {
 	return UpsertRimsV1Params{
 		Code:     RandomRimCode(), // Example for Random Code Generation
 		Width:    sql.NullString{String: "12.50", Valid: true},

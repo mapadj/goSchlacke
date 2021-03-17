@@ -8,7 +8,7 @@ import (
 )
 
 func TestUpsertRimsV1(t *testing.T) {
-	arg := RandomRimV1()
+	arg := RandomUpsertRimsV1Params()
 
 	rim, err := testQueries.UpsertRimsV1(context.Background(), arg)
 

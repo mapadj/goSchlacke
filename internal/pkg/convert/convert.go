@@ -1,10 +1,11 @@
-package db
+package convert
 
 import (
 	"database/sql"
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func IsEmpty(i string) bool {
@@ -55,4 +56,17 @@ func ConvertInt32ToNullInt32(input int32) sql.NullInt32 {
 }
 func ConvertBoolToNullBool(input bool) sql.NullBool {
 	return sql.NullBool{Bool: input, Valid: true}
+}
+
+func ConvertStringToNullDate(input string, format string) (output sql.NullTime, err error) {
+	// Parse Value
+	validFromDate, err := time.Parse(format, input)
+	if err != nil {
+		return output, fmt.Errorf("TimeDate: Conversion Error: %v", err)
+	}
+
+	// Create NullTime Value
+	output = sql.NullTime{Time: validFromDate, Valid: true}
+
+	return output, nil
 }

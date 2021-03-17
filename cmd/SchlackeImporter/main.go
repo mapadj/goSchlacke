@@ -8,42 +8,19 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	db "github.com/mapadj/goSchlacke/db/sqlc"
-	"github.com/mapadj/goSchlacke/db/sqlc/rims"
-	"github.com/mapadj/goSchlacke/util"
+
+	"github.com/mapadj/goSchlacke/internal/app/SchlackeImporter"
+	db "github.com/mapadj/goSchlacke/internal/pkg/db/sqlc"
+	"github.com/mapadj/goSchlacke/internal/pkg/tables"
+	"github.com/mapadj/goSchlacke/internal/pkg/util"
 )
 
-const (
-	dbDriver = "postgres"
-	dbSource = "postgresql://root:secret@localhost:5432/schlacke?sslmode=disable"
-)
-
-var queries *db.Queries
-var arg *db.ImportTxParams
-
-type Functions struct {
-	ImportTableFactory   func() interface{}
-	CountDatabaseEntries func(ctx context.Context) (count int64, err error)
-	ConvertAndValidate   func(importTable interface{}) (result interface{}, err error)
-	Upsert               func(ctx context.Context, params interface{}) (result interface{}, err error)
-}
-
-var FunctionsRimsV1 = Functions{
-	ImportTableFactory:   rims.NewImportTable(),
-	CountDatabaseEntries: queries.CountRimsV1,
-	ConvertAndValidate:   rims.ConvertAndValidate,
-	Upsert:               db.UpsertRimsV1Params,
-}
-
-var DBRowCounter = &map[string]func(ctx context.Context) (count int64, err error){
-	"RimsV1":     queries.CountRimsV1,
-	"TimespanV1": queries.CountTimespansV1,
-}
+var arg *tables.ImportTxParams
 
 func init() {
 
 	// Prepare Data
-	arg = &db.ImportTxParams{}
+	arg = &tables.ImportTxParams{}
 	flag.IntVar(&arg.MaxFailRateInPerCent, "max-fail-rate", 5, "Maximal Allowed Failrate in %. Default: 5")
 	flag.StringVar(&arg.DatVersion, "version", "V1", "DatVersion, Default: 'V1'")
 
@@ -78,7 +55,7 @@ func main() {
 	if err != nil {
 		log.Fatal("cannot connect to db:", err)
 	}
-	store := db.NewStore(conn)
+	store := SchlackeImporter.NewStore(conn)
 
 	// Import Data
 	result, err := store.ImportTx(context.Background(), *arg)

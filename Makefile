@@ -26,7 +26,7 @@ test:
 	go test -v -cover ./...
 
 happy:
-	go run main.go -table rims -file data/rims_good.dat
+	go run cmd/SchlackeImporter/main.go -table rims -file data/rims_good.dat
 
 mock:
 	mockgen -package mockdb -destination db/mock/store.go db/sqlc Querier
