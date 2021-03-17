@@ -70,3 +70,14 @@ func ConvertStringToNullDate(input string, format string) (output sql.NullTime, 
 
 	return output, nil
 }
+
+const date_layout_german_10 string = "02.01.2006"
+
+func ConvertStringToNullDateStandardFormatWithAllZeroCheck(input string) (output sql.NullTime, err error) {
+
+	if input == "00.00.0000" {
+		return sql.NullTime{Time: time.Time{}, Valid: true}, nil
+	}
+
+	return ConvertStringToNullDate(input, date_layout_german_10)
+}

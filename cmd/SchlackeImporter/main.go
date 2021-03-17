@@ -82,4 +82,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Println("TIME TOTAL IN MICROSECONDS: ", timeEnd.Sub(timeStart).Microseconds())
 }

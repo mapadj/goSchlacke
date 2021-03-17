@@ -18,27 +18,39 @@ valid_to		Bool	10
 const TimespansV1LineLength = 36
 
 // ImportTable define the format
-type ImportTable struct {
+type importTable struct {
+	tables.ImportStruct
 	SchwackeID   string `fixed:"1,8"`
 	SchwackeCode string `fixed:"9,16"`
 	ValidFrom    string `fixed:"17,26"`
 	ValidTo      string `fixed:"27,36"`
 }
 
+// Container
+type TimespansV1Container struct {
+	importTable           *importTable
+	ConvertedAndValidated *db.UpsertTimespansV1Params
+}
+
+func (c TimespansV1Container) GetImportStruct() tables.ImportStruct {
+	return c.importTable
+}
+
+func (c TimespansV1Container) GetUpsertStruct() interface{} {
+	return c.ConvertedAndValidated
+}
+
+// Handler
 type TimespansV1Handler struct {
 }
 
 func NewHandler() tables.ImportHandler {
-	return TimespansV1Handler{}
+	return &TimespansV1Handler{}
 }
 
-type TimespansV1Container struct {
-	RawStruct             ImportTable
-	ConvertedAndValidated db.UpsertTimespansV1Params
-}
-
-func (handler TimespansV1Handler) NewContainer() tables.Importable {
-	return TimespansV1Container{
-		// RawStruct: ImportTable{},
+func (handler TimespansV1Handler) NewContainer() tables.ImportContainer {
+	return &TimespansV1Container{
+		importTable:           &importTable{},
+		ConvertedAndValidated: &db.UpsertTimespansV1Params{},
 	}
 }

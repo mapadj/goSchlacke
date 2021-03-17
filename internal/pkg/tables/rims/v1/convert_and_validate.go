@@ -13,11 +13,11 @@ import (
 func (rc RimsV1Container) ConvertAndValidate() (err error) {
 
 	// Init vars
-	rim := rc.RawStruct
+	rim := rc.GetImportStruct().(*importTable)
 
 	// CODE
 	if convert.IsEmpty(rim.Code) {
-		return errors.New("Code Field Empty")
+		return errors.New("code field empty")
 	}
 	rc.ConvertedAndValidated.Code, err = convert.ConvertStringToInt32(rim.Code)
 	if err != nil {
@@ -26,12 +26,12 @@ func (rc RimsV1Container) ConvertAndValidate() (err error) {
 
 	// WIDTH
 	if convert.IsEmpty(rim.Width) {
-		errors.New("Width Field Empty")
+		return errors.New("width field empty")
 	}
 	w := strings.TrimSpace(rim.Width)
 	_, err = strconv.ParseFloat(w, 64)
 	if err != nil {
-		return fmt.Errorf("Width: Float Conversion Error: %v", err)
+		return fmt.Errorf("width: float conversion error: %v", err)
 	}
 	rc.ConvertedAndValidated.Width = convert.ConvertStringToNullString(w)
 	if err != nil {
@@ -40,7 +40,7 @@ func (rc RimsV1Container) ConvertAndValidate() (err error) {
 
 	// OnePiece
 	if convert.IsEmpty(rim.OnePiece) {
-		return errors.New("OnePiece Field Empty")
+		return errors.New("OnePiece field empty")
 	}
 	rc.ConvertedAndValidated.OnePiece, err = convert.ConvertXxToNullBool(rim.OnePiece)
 	if err != nil {

@@ -7,12 +7,20 @@ import (
 	db "github.com/mapadj/goSchlacke/internal/pkg/db/sqlc"
 )
 
-type Importable interface {
+type ImportContainer interface {
+	GetImportStruct() ImportStruct
+	GetUpsertStruct() interface{}
 	ConvertAndValidate() (err error)
 }
 
 type ImportHandler interface {
-	NewContainer() Importable
+	NewContainer() ImportContainer
+}
+
+type ImportStruct interface {
+}
+
+type UpsertStruct interface {
 }
 
 // ImportChoserParams params

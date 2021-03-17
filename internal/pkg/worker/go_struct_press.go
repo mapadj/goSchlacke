@@ -8,19 +8,20 @@ import (
 )
 
 // StructPress splits every line into structs and sends result Data Converter
-func StructPress(in <-chan []byte, factory tables.ImportHandler) <-chan tables.Importable {
+func StructPress(in <-chan []byte, factory tables.ImportHandler) <-chan tables.ImportContainer {
 
-	out := make(chan tables.Importable)
+	out := make(chan tables.ImportContainer, 1000)
 	go func() {
 		for n := range in {
 			d := factory.NewContainer()
-			err := fl.Unmarshal(n, &d)
+			err := fl.Unmarshal(n, d.GetImportStruct())
 			if err != nil {
 				log.Fatal(err)
 			}
 			out <- d
 		}
 		close(out)
+		log.Println("FINISHED STRUCT PRESS")
 	}()
 	return out
 }

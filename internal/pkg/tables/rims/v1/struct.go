@@ -20,7 +20,8 @@ material	Char	1		S = Stahl, L = Leichtmetall
 const RimsV1LineLength = 15
 
 // ImportTable define the format
-type ImportTable struct {
+type importTable struct {
+	tables.ImportStruct
 	Code     string `fixed:"1,5"`
 	Width    string `fixed:"6,10"`
 	Height   string `fixed:"11,11"`
@@ -29,20 +30,32 @@ type ImportTable struct {
 	Material string `fixed:"15,15"`
 }
 
+// Container
+
+type RimsV1Container struct {
+	importTable           *importTable
+	ConvertedAndValidated *db.UpsertRimsV1Params
+}
+
+func (c RimsV1Container) GetImportStruct() tables.ImportStruct {
+	return c.importTable
+}
+
+func (c RimsV1Container) GetUpsertStruct() interface{} {
+	return c.ConvertedAndValidated
+}
+
+// Handler
 type RimsV1Handler struct {
 }
 
 func NewHandler() tables.ImportHandler {
-	return RimsV1Handler{}
+	return &RimsV1Handler{}
 }
 
-type RimsV1Container struct {
-	RawStruct             ImportTable
-	ConvertedAndValidated db.UpsertRimsV1Params
-}
-
-func (handler RimsV1Handler) NewContainer() tables.Importable {
-	return RimsV1Container{
-		// RawStruct: ImportTable{},
+func (handler RimsV1Handler) NewContainer() tables.ImportContainer {
+	return &RimsV1Container{
+		importTable:           &importTable{},
+		ConvertedAndValidated: &db.UpsertRimsV1Params{},
 	}
 }

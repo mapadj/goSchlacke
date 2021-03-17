@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 
 	db "github.com/mapadj/goSchlacke/internal/pkg/db/sqlc"
 	"github.com/mapadj/goSchlacke/internal/pkg/tables"
@@ -96,13 +97,15 @@ func (store *Store) ImportTx(ctx context.Context, importTxParams tables.ImportTx
 
 // StartImportTransaction choses Import
 func (store *Store) StartImportTransaction(importChoserParams *tables.ImportChoserParams) (err error) {
-	return store.execTx(importChoserParams.Ctx, func(q *db.Queries) error {
+	return store.execTx(importChoserParams.Ctx, func(q *db.Queries) (err error) {
 
+		log.Println("Transaction Started")
 		// construct Type Name
-		t := importChoserParams.ImportTxParams.Table
-		v := importChoserParams.ImportTxParams.DatVersion
+		t := strings.Title(importChoserParams.ImportTxParams.Table)
+		v := strings.Title(importChoserParams.ImportTxParams.DatVersion)
 		n := t + v
 
+		log.Println("n: ", n)
 		// select ImportableContainerFactory
 		factory := ContainerFactoryMap[n]()
 
@@ -113,9 +116,9 @@ func (store *Store) StartImportTransaction(importChoserParams *tables.ImportChos
 			return errors.New("reflect count database call returned wrong result length")
 		}
 		numberOfEntries := resultSlice[0].Interface().(int64)
-		err := resultSlice[1].Interface().(error)
-		if err != nil {
-			return err
+		rerr := resultSlice[1].Interface()
+		if rerr != nil {
+			return fmt.Errorf("error calling: %v", rerr)
 		}
 
 		// Create Error Channel
@@ -144,9 +147,9 @@ func (store *Store) StartImportTransaction(importChoserParams *tables.ImportChos
 			return errors.New("reflect count database call returned wrong result length")
 		}
 		numberOfEntriesAfter := resultSlice[0].Interface().(int64)
-		err = resultSlice[1].Interface().(error)
-		if err != nil {
-			return err
+		rerr = resultSlice[1].Interface()
+		if rerr != nil {
+			return fmt.Errorf("error calling: %v", rerr)
 		}
 
 		// Statistics
