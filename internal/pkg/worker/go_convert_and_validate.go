@@ -10,7 +10,7 @@ import (
 // StartConvertAndValidateThread Convert and Validate
 func StartConvertAndValidateThread(in <-chan tables.ImportContainer, importChoserParams tables.ImportChoserParams, errorChannel chan error) <-chan tables.ImportContainer {
 
-	out := make(chan tables.ImportContainer, 1000)
+	out := make(chan tables.ImportContainer)
 	go func() {
 		i := 0
 		// Consume input channel

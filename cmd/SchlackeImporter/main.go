@@ -84,4 +84,5 @@ func main() {
 	}
 
 	log.Println("TIME TOTAL IN MICROSECONDS: ", timeEnd.Sub(timeStart).Microseconds())
+	log.Println("TIME TOTAL IN SECONDS: ", timeEnd.Sub(timeStart).Seconds())
 }
